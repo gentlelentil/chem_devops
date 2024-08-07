@@ -1,0 +1,30 @@
+
+
+{% extends "base.html" %}
+
+
+{% block content %}
+    <!-- main content-->
+    <div class="flex justify-center items-center min-h-screen">
+        <div class="w-full max-w-lg p-6 bg-white shadow-md rounded">
+        <h1 class="text-2xl font-bold mb-4 text-center">Enter a SMILES string</h1>
+        <form method="POST" class="space-y-4">
+            <input type="text" name="smiles" placeholder="Enter SMILES" class="border border-gray-300 p-2 rounded w-full">
+            <input type="submit" value="Generate Molecule" class="bg-blue-600 text-white p-2 rounded cursor-pointer w-full">
+        </form>
+
+        {% if img_filename %}
+        <h2 class="text-xl font-semibold mt-6 mb-2 text-center">Generated Molecule:</h2>
+        <div class="flex justify-center">
+            <img src="{{ url_for('static', filename='images/' + img_filename) }}" alt="Molecule Image" class="mt-4 mx-auto">
+            <!-- <img src="{{ img_path }}" alt="Molecule Image" class="mb-4"> -->
+        </div>
+        <h3 class="text-lg font-semibold text-center">SMILES: {{ smiles }}</h3>
+        {% endif %}
+    
+        {% if error %}
+        <p class="text-red-600 mt-4 text-center">{{ error }}</p>
+        {% endif %}
+        </div>
+    </div>
+{% endblock %}

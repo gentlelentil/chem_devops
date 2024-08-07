@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex justify-center items-center min-h-screen">
+    <div class="w-full max-w-md p-6 bg-white shadow-md rounded">
+        <h1 class="text 2xl font-bold mb-4 text-center">Register</h1>
+        
+        {% if error_message %}
+        <p class="text-red-500 text-sm mb-4 text-center">{{ error_message }}</p>
+        {% endif %}
+        
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class=""mb-4>
+                {{ form.username.label(class="block text-sm font-medium text-gray-700") }}
+                {{ form.username(class="border border-gray-300 p-2 rounded w-full") }}
+                {% for error in form.username.errors %}
+                <p class="text-red-600 text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <div class="mb-4">
+                {{ form.password.label(class="block text-sm font-medium text-gray-700") }}
+                {{ form.password(class="border border-gray-300 p-2 rounded w-full") }}
+                {% for error in form.password.errors %}
+                <p class="text-red-600 text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <div class="mb-4">
+                {{ form.confirm_password.label(class="block text-sm font-medium text-gray-700") }}
+                {{ form.confirm_password(class="border border-gray-300 p-2 rounded w-full") }}
+                {% for error in form.confirm_password.errors %}
+                <p class="text-red-600 text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <div class="mb-4">
+                {{ form.submit(class="bg-blue-600 text-white p-2 rounded cursor-pointer w-full") }}
+            </div>
+                
+        </form>
+    </div>
+</div>
+{% endblock %}

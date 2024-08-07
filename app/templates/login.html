@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+<!-- {% block title %}Login{% endblock %} -->
+
+{% block content %}
+<div class="flex justify-center items-center min-h-screen">
+    <div class="w-full max-w-md p-6 bg-white shadow-md rounded">
+        <h1 class="text-2xl font-bold mb-4 text-center">Login</h1>
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="mb-4">
+                {{ form.username.label(class="block text-sm font-medium text-gray-700") }}
+                {{ form.username(class="border border-gray-300 p-2 rounded w-full") }}
+                {% for error in form.username.errors %}
+                <p class="text-red-600 text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <div class="mb-4">
+                {{ form.password.label(class="block text-sm font-medium text-gray-700") }}
+                {{ form.password(class="border border-gray-300 p-2 rounded w-full") }}
+                {% for error in form.password.errors %}
+                <p class="text-red-600 text-sm">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <div class="mb-4">
+                {{ form.submit(class="bg-blue-600 text-white p-2 rounded cursor-pointer w-full") }}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

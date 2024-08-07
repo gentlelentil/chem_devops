@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang=""en">
+<head>
+    <meta charset="UTF-8">
+    <meta name=""viewport" content="width=device-width, initial-scale=1.0">
+    {% if title %}
+    <title>{{ title }}</title>
+    {% else %}
+    <title>Chemistry project</title>
+    {% endif %}
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body style="background-color: #bee248;">
+
+<nav class="bg-blue-600 p-4">
+    <div class="container mx-auto flex justify-between items-center">
+        <a href="/" class="text-white text-lg font-semibold">Molecule Visualiser</a>
+        <div>
+            {% if current_user.is_authenticated %}
+                <a href="/logout" class="text-white mx-2 hover:underline">Logout</a>
+            {% else %}
+                <a href="/login" class="text-white mx-2 hover:underline">Login</a>
+                <a href="/register" class="text-white mx-2 hover:underline">Register</a>
+            {% endif %}
+            <a href="#" class="text-white mx-2 hover:underline">About</a>
+            <a href="#" class="text-white mx-2 hover:underline">Contact</a>
+        </div>
+    </div>
+</nav>
+
+    {% block content %}{% endblock %}
+</body>
+</html>

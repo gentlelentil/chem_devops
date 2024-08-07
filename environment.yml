@@ -129,4 +129,3 @@ dependencies:
       - flask-wtf==1.2.1
       - tzlocal==5.2
       - wtforms==3.1.2
-prefix: /home/nathaniel/Desktop/flask/venv/miniconda/envs/smilesapp_dev

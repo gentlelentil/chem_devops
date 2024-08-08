@@ -10,3 +10,7 @@ Dockerfile built with:
 
 $ docker build -t my-app .
 
+Docker built on linux/amd64 exposed on localhost:5000
+
+Either run through Docker Desktop or:
+$ docker run --platform linux/amd64 -d ghcr.io/gentlelentil/chem_devops_docker

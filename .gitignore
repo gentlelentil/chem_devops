@@ -2,3 +2,4 @@ app/__pycache__/
 venv/
 app/instance/
 __pycache__
+app/static/images/

@@ -1,2 +1,7 @@
 ___pycache__
 venv
+/instance
+/conda-packages
+/app/static/images/*
+/app/__pycache__
+/app/instance

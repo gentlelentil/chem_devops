@@ -22,8 +22,8 @@ COPY . /app/
 
 RUN mkdir -p /app/instance
 
-#copy database files
-COPY instance/users.db instance/users.db
+#copy database files not for initial instance
+# COPY instance/users.db instance/users.db
 
 #expose port
 EXPOSE 5000

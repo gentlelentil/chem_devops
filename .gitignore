@@ -4,3 +4,4 @@ app/instance/
 __pycache__
 app/static/images/
 /instance
+deployment.yaml

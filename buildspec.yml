@@ -1,21 +1,18 @@
-version 0.2
-
-env:
-  variables:
-    AWS_DEFAULT_REGION: "eu-central-1"
+version: 0.2
 
 phases:
   pre_build:
     commands:
-      - echo "Retrieving ECR Repository URI from Parameter Store..."
-      - export REPOSITORY_URI=$(aws ssm get-parameter --name "ECRRepositoryUri" --query "Parameter.Value" --output text)
+      - echo "Retrieving AWS account ID using STS..."
+      - export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+      - export REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/my-flask-app
       - echo "Logging in to Amazon ECR..."
-      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
+      - aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $REPOSITORY_URI
   build:
     commands:
       - echo "Building the Docker image..."
       - docker build -t $REPOSITORY_URI:latest .
   post_build:
     commands:
-      - echo "Pushing the Docker image to ECR..."
+      - echo "Pushing Docker image to ECR..."
       - docker push $REPOSITORY_URI:latest

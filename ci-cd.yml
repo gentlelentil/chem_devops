@@ -1,0 +1,92 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registry: ${{ secrets.AWS_REGION }}.amazonaws.com
+
+      - name: Build and push Docker image
+        run: |
+          # Build the Docker image
+          docker build -t my-image:latest .
+          
+          # Tag the Docker image
+          docker tag my-image:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-repo:latest
+          
+          # Push the Docker image to ECR
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-repo:latest
+
+      - name: Register new ECS Task Definition
+        id: register-task-def
+        run: |
+          # Define the task definition JSON
+          TASK_DEFINITION_JSON=$(jq -n \
+            --arg image "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/my-repo:latest" \
+            '{
+              family: "my-task-definition",
+              containerDefinitions: [
+                {
+                  name: "my-container",
+                  image: $image,
+                  essential: true,
+                  memory: 512,
+                  cpu: 256,
+                  portMappings: [
+                    {
+                      containerPort: 80,
+                      hostPort: 80
+                    }
+                  ]
+                }
+              ],
+              requiresCompatibilities: ["FARGATE"],
+              networkMode: "awsvpc",
+              cpu: "256",
+              memory: "512"
+            }')
+
+          echo "$TASK_DEFINITION_JSON" > task-definition.json
+          
+          # Register the new task definition
+          OUTPUT=$(aws ecs register-task-definition \
+            --region $AWS_REGION \
+            --cli-input-json file://task-definition.json)
+          
+          # Extract the task definition ARN
+          echo "::set-output name=task-definition-arn::$(echo $OUTPUT | jq -r '.taskDefinition.taskDefinitionArn')"
+
+      - name: Update ECS Service
+        run: |
+          # Update the ECS service with the new task definition
+          aws ecs update-service \
+            --region $AWS_REGION \
+            --cluster ${{ secrets.ECS_CLUSTER }} \
+            --service ${{ secrets.ECS_SERVICE }} \
+            --task-definition ${{ steps.register-task-def.outputs.task-definition-arn }}
+
+      - name: Notify Deployment Success
+        if: success()
+        run: echo "Deployment to ECS was successful!"
+
+      - name: Notify Deployment Failure
+        if: failure()
+        run: echo "Deployment to ECS failed. Please check the logs for details."

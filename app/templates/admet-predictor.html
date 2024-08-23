@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-screen" style="background-color: #bee248">
+    <div class="w-full max-w-lg p-6 bg-white shadow-md rounded-lg">
+        <h1 class="text-2xl font-bold mb-4 text-center">Submit SMILES String for ADMET prediction</h1>
+        <form action="{{ url_for('auth.admetpredictor') }}" method="post" class="space-y-4">
+            <label for="smiles_string" class="block text-sm font-medium text-gray-700 text-center">SMILES</label>
+            <input type="text" id="smiles_string" name="smiles_string" placeholder="Enter SMILES" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm" required>
+            <div class="flex justify-center">
+                <button type="submit" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Submit</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- <div class="container mx-auto mt-8">
+    <h1 class="text-2xl font-bold mb-4">Submit SMILES String</h1>
+    <form action="{{ url_for('auth.admetpredictor') }}" method="post" class="bg-white p-6 rounded-lg shadow-md">
+        <label for="smiles_string" class="block text-sm font-medium text-gray-700">SMILES String</label>
+        <input type="text" id="smiles_string" name="smiles_string" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm" required>
+        <button type="submit" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Submit</button>
+    </form>
+</div> -->
+{% endblock %}

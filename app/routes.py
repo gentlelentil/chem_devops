@@ -115,26 +115,27 @@ def smiles_generator():
                 return render_template('smiles-generator.html', error=str(e))
     return render_template('smiles-generator.html', title='SMILES Generator')
 
+#model url
+ADMET_MODEL_URL = 'http://0.0.0.0:5001/predict'
 
 #prediction route
-@auth.route('/prediction', methods=['POST'])
+@auth.route('/admetpredictor', methods=['GET', 'POST'])
 @login_required
-def prediction():
-    data = request.get_json()
-    smiles = data['smiles']
+def admetpredictor():
 
-    if not smiles:
-        return jsonify({'error': 'No SMILES string provided'}), 400
-    
-    # ml prediction url
-    ML_URL = 'http://ml_pipeline:5001/predict'
-    
-    try:
-        response = requests.post(ML_URL, json={'smiles': smiles})
-        result = response.json()
-        return jsonify(result)
-    
-    except requests.exceptions.RequestException as e:
-        return jsonify({'error': 'Failed to connect to ML service', 'details': str(e)}), 500
+    if request.method == 'POST':
+        smiles_string = request.form.get('smiles_string')
+        if smiles_string:
+            response = requests.post(ADMET_MODEL_URL, json={'smiles': smiles_string})
+            if response.status_code == 200:
+                result = response.json()
+                return redirect (url_for('auth.admet-result', result=result))
+            else:
+                return 'Failed to get prediction', response.status_code
+    return render_template('admet-predictor.html', title='ADMET Predictor')
 
-    
+@auth.route('/admet-result')
+@login_required
+def admet_result():
+    prediction = request.args.get('result')
+    return render_template('admet-result.html', prediction=prediction, title='ADMET Result')

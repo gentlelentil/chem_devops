@@ -33,4 +33,4 @@ RUN pip install gunicorn
 
 # run server with gunicorn for production
 # CMD ["conda", "run", "--no-capture-output", "-n", "smilesapp_dev", "flask", "run", "--host=0.0.0.0", "-p", "5000"]
-CMD ["conda", "run", "--no-capture-output", "-n", "smilesapp_dev", "gunicorn", "run", "-w", "4", "-b", "0.0.0.0:5000", "run:app"]
+CMD ["conda", "run", "--no-capture-output", "-n", "smilesapp_dev", "gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "run:app"]

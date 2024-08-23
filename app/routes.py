@@ -1,5 +1,7 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_user, login_required, logout_user, current_user
+import requests
+
 from . import db
 
 from rdkit import Chem
@@ -112,3 +114,27 @@ def smiles_generator():
             except Exception as e:
                 return render_template('smiles-generator.html', error=str(e))
     return render_template('smiles-generator.html', title='SMILES Generator')
+
+
+#prediction route
+@auth.route('/prediction', methods=['POST'])
+@login_required
+def prediction():
+    data = request.get_json()
+    smiles = data['smiles']
+
+    if not smiles:
+        return jsonify({'error': 'No SMILES string provided'}), 400
+    
+    # ml prediction url
+    ML_URL = 'http://ml_pipeline:5001/predict'
+    
+    try:
+        response = requests.post(ML_URL, json={'smiles': smiles})
+        result = response.json()
+        return jsonify(result)
+    
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': 'Failed to connect to ML service', 'details': str(e)}), 500
+
+    

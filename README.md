@@ -16,3 +16,7 @@ Docker built on linux/amd64 exposed on localhost:5000
 
 Either run through Docker Desktop or:
 $ docker run --platform linux/amd64 -d ghcr.io/gentlelentil/chem_devops_docker
+
+Additional linking to ML pipeline, input is SMILES string, output is predictions for each dataset
+
+Deploy on port:5000, ML on port:5001

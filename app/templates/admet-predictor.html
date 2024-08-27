@@ -11,6 +11,19 @@
                 <button type="submit" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Submit</button>
             </div>
         </form>
+
+        {% if prediction %}
+            <h2 class="text-xl font-bold mt-6 mb-4 text-center">Prediction Results</h2> <!-- Added mb-4 for spacing -->
+                <div class="space-y-4">
+                    {% for item in prediction %}
+                        <div class="flex justify-between">
+                            <span class="font-bold text-gray-700">{{ item[0] }}</span>  <!-- Key -->
+                            <span class="text-gray-900">{{ item[1] }}</span>           <!-- Value -->
+                        </div>
+                    {% endfor %}
+                </div>
+        {% endif %}
+
     </div>
 </div>
 

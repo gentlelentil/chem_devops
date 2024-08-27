@@ -116,7 +116,8 @@ def smiles_generator():
     return render_template('smiles-generator.html', title='SMILES Generator')
 
 #model url
-ADMET_MODEL_URL = 'http://0.0.0.0:5001/predict'
+ADMET_MODEL_URL = 'http://ml_model:5001/predict'
+# ADMET_MODEL_URL = 'http://0.0.0.0:5001/predict'
 
 #prediction route
 @auth.route('/admetpredictor', methods=['GET', 'POST'])
@@ -125,17 +126,37 @@ def admetpredictor():
 
     if request.method == 'POST':
         smiles_string = request.form.get('smiles_string')
+        
+        
         if smiles_string:
             response = requests.post(ADMET_MODEL_URL, json={'smiles': smiles_string})
             if response.status_code == 200:
                 result = response.json()
-                return redirect (url_for('auth.admet-result', result=result))
+
+                if 'prediction' in result:
+                   
+                    format_results = [(key, value) for key, value in result['prediction'].items()]
+                else:
+                    format_results = 'No prediction available'
+
+                #admet_result because it is the FUNCTION NAME NOT THE HTML FILENAME
+
+                return render_template('admet-predictor.html', prediction=format_results, title='ADMET Predictor')
+
+                # return redirect (url_for('auth.admet_result', result=result))
             else:
                 return 'Failed to get prediction', response.status_code
-    return render_template('admet-predictor.html', title='ADMET Predictor')
+            
 
-@auth.route('/admet-result')
-@login_required
-def admet_result():
-    prediction = request.args.get('result')
-    return render_template('admet-result.html', prediction=prediction, title='ADMET Result')
+
+    return render_template('admet-predictor.html', title='ADMET Predictor', prediction=None)
+
+# @auth.route('/admetresult')
+# @login_required
+# def admet_result():
+#     prediction = request.args.get('result')
+
+
+
+
+#     return render_template('admet-result.html', prediction=prediction, title='ADMET Result')

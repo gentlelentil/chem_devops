@@ -5,3 +5,4 @@ __pycache__
 app/static/images/
 /instance
 deployment.yaml
+ci.yml

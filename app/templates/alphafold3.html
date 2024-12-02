@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-screen" style="background-color: #bee248">
+    <div class="w-full max-w-lg p-6 bg-white shadow-md rounded-lg">
+        <h1 class="text-2xl font-bold mb-4 text-center">Generate AlphaFold3 JSON Input</h1>
+        <form action="{{ url_for('auth.alphafold3') }}" method="post" class="space-y-4">
+
+            <label for="name" class="block text-sm font-medium text-gray-700 text-center">Job Name</label>
+            <input type="text" id="name" name="name" placeholder="Enter job name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm" required>
+
+
+            <label for="protein_sequence" class="block text-sm font-medium text-gray-700 text-center">Protein Sequence</label>
+            <textarea id="protein_sequence" name="protein_sequence" placeholder="Enter protein sequence" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm" rows="6" required></textarea>
+
+
+            <label for="num_chains" class="block text-sm font-medium text-gray-700 text-center">Number of Chains</label>
+            <select id="num_chains" name="num_chains" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm" required onchange="updateProteinIDs()">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+            </select>
+
+
+            <label for="ligand_smiles" class="block text-sm font-medium text-gray-700 text-center">Ligand SMILES</label>
+            <input type="text" id="ligand_smiles" name="ligand_smiles" placeholder="Enter SMILES" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm" required>
+
+            <div class="flex justify-center">
+                <button type="submit" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Generate JSON</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function updateProteinIDs() {
+        const numChains = parseInt(document.getElementById("num_chains").value);
+        let ids = [];
+        for (let i = 0; i < numChains; i++) {
+            ids.push(String.fromCharCode(65 + i)); // Generates 'A', 'B', 'C', etc.
+        }
+        document.getElementById("protein_ids").value = ids.join(", ");
+    }
+</script>
+{% endblock %}

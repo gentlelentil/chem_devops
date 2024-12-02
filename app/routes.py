@@ -8,6 +8,7 @@ from rdkit import Chem
 from rdkit.Chem import Draw
 import os
 import time
+import json
 
 from .models import User, RegistrationForm, LoginForm
 
@@ -194,6 +195,57 @@ def admetpredictor():
 
 
     return render_template('admet-predictor.html', title='ADMET Predictor', prediction=None)
+
+@auth.route('/alphafold3', methods=['GET', 'POST'])
+@login_required
+def alphafold3():
+    if request.method == 'POST':
+        # Collect input data from the form
+        name = request.form.get('name')
+        num_chains = int(request.form.get('num_chains'))
+        # num_ligands = int(request.form.get('num_ligands'))
+        num_ligands = 1
+        # protein_ids = request.form.getlist('protein_id')  # Get the list of selected protein IDs
+        # ligand_id = request.form.get('ligand_id')
+        sequence  = request.form.get('protein_sequence')
+        ligand_smiles = request.form.get('ligand_smiles')
+
+        # Generate sequential letter IDs for proteins and ligands
+        sequence_ids = [chr(65 + i) for i in range(num_chains)]
+        ligand_ids = [chr(65 + num_chains + i) for i in range(num_ligands)]
+
+        # Create the JSON structure
+        data = {
+            "name": name,
+            "sequences": [
+                {
+                    "protein": {
+                        "id": sequence_ids,  # List of protein IDs based on number of chains
+                        "sequence": sequence
+                    }
+                },
+                {
+                    "ligand": {
+                        "id": ligand_ids[0],  # Assuming only one ligand ID is needed
+                        "smiles": ligand_smiles
+                    }
+                }
+            ],
+            "modelSeeds": [1],
+            "dialect": "alphafold3",
+            "version": 1
+        }
+
+        # Save the JSON to a file
+        output_file = f"{name}_input.json"
+        # output_path = os.path.join("/home/af/af_output", output_file)
+        output_path = os.path.join("/home/nathaniel/Documents/alphafold_json_testdir", output_file)
+        with open(output_path, 'w') as file:
+            json.dump(data, file, indent=2)
+
+        return jsonify({"message": "JSON file created successfully!", "file": output_path})
+
+    return render_template('alphafold3.html')
 
 # @auth.route('/admetresult')
 # @login_required

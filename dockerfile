@@ -30,6 +30,7 @@ RUN mkdir -p /app/instance
 EXPOSE 5000
 
 RUN pip install gunicorn
+RUN pip install flask-migrate
 
 # run server with gunicorn for production
 # CMD ["conda", "run", "--no-capture-output", "-n", "smilesapp_dev", "flask", "run", "--host=0.0.0.0", "-p", "5000"]

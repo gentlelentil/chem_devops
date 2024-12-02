@@ -4,6 +4,8 @@ from flask_login import LoginManager
 from config import Config
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
+from flask_migrate import Migrate
+
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -32,6 +34,8 @@ def create_app():
     scheduler = BackgroundScheduler()
     scheduler.add_job(cleanup_images, 'interval', hours=1)
     scheduler.start()
+
+    migrate = Migrate(app, db)
 
     with app.app_context():
         db.create_all()  # Create database tables

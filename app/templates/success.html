@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-screen" style="background-color: #bee248">
+    <div class="w-full max-w-lg p-6 bg-white shadow-md rounded-lg text-center">
+        <h1 class="text-2xl font-bold mb-4">Success!</h1>
+        <p class="text-lg">JSON files have been created successfully.</p>
+
+        <!-- Link to download the zip file -->
+        <a href="{{ url_for('auth.download_zip', filename=zip_filename) }}" class="mt-4 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Download ZIP</a>
+
+        <!-- Button to return to the input form -->
+        <a href="{{ url_for('auth.alphafold3') }}" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Create Another</a>
+    </div>
+</div>
+{% endblock %}

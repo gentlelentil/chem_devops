@@ -4,29 +4,48 @@
 <div class="flex items-center justify-center min-h-screen" style="background-color: #bee248">
     <div class="w-full max-w-lg p-6 bg-white shadow-md rounded-lg">
         <h1 class="text-2xl font-bold mb-4 text-center">Generate AlphaFold3 JSON Input</h1>
-        <form action="{{ url_for('auth.alphafold3') }}" method="post" class="space-y-4">
+        <form action="{{ url_for('auth.alphafold3') }}" method="post" enctype="multipart/form-data" class="space-y-4">
 
+            <!-- Job Name -->
             <label for="name" class="block text-sm font-medium text-gray-700 text-center">Job Name</label>
             <input type="text" id="name" name="name" placeholder="Enter job name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm" required>
 
+            <!-- Protein Sequences -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 text-center">Protein Sequences</label>
+                <div id="sequence_fields" class="space-y-2">
+                    <input type="text" name="sequence_0" placeholder="Enter protein sequence 1" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm" required>
+                </div>
+                <button type="button" onclick="addField('sequence_fields', 'sequence')" class="mt-2 px-2 py-1 bg-green-600 text-white rounded-md hover:bg-green-700">Add Sequence</button>
+                <p id="sequence_limit_warning" class="text-red-600 text-sm hidden">You can only add up to 3 sequences.</p>
+            </div>
 
-            <label for="protein_sequence" class="block text-sm font-medium text-gray-700 text-center">Protein Sequence</label>
-            <textarea id="protein_sequence" name="protein_sequence" placeholder="Enter protein sequence" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm" rows="6" required></textarea>
+            <!-- Method Selection -->
+            <div id="method_selection" class="text-center mt-4">
+                <button type="button" id="choose_sdf" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700" onclick="showSdfInput()">Upload SDF File</button>
+                <button type="button" id="choose_smiles" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700" onclick="showSmilesInput()">Enter Ligand SMILES</button>
+            </div>
 
+            <!-- Ligand SMILES Section (Hidden initially) -->
+            <div id="ligand_smiles_section" class="hidden space-y-2">
+                <label class="block text-sm font-medium text-gray-700 text-center">Ligand SMILES</label>
+                <div id="ligand_smiles_fields" class="space-y-2">
+                    <input type="text" name="ligand_smiles_0" placeholder="Enter ligand SMILES 1" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <button type="button" onclick="addField('ligand_smiles_fields', 'ligand_smiles')" class="mt-2 px-2 py-1 bg-green-600 text-white rounded-md hover:bg-green-700">Add Ligand</button>
+                <p id="ligand_limit_warning" class="text-red-600 text-sm hidden">You can only add up to 10 ligands.</p>
+                <button type="button" class="mt-2 px-2 py-1 bg-red-600 text-white rounded-md hover:bg-red-700" onclick="cancelInput('ligand_smiles_section')">Cancel Ligand SMILES</button>
+            </div>
 
-            <label for="num_chains" class="block text-sm font-medium text-gray-700 text-center">Number of Chains</label>
-            <select id="num_chains" name="num_chains" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm" required onchange="updateProteinIDs()">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-            </select>
+            <!-- SDF File Upload Section (Hidden initially) -->
+            <div id="sdf_section" class="hidden space-y-2">
+                <label class="block text-sm font-medium text-gray-700 text-center">Upload SDF File</label>
+                <input type="file" name="sdf_file" accept=".sdf" class="mt-1 block w-full text-sm text-gray-700">
+                <button type="button" class="mt-2 px-2 py-1 bg-red-600 text-white rounded-md hover:bg-red-700" onclick="cancelInput('sdf_section')">Cancel SDF Upload</button>
+            </div>
 
-
-            <label for="ligand_smiles" class="block text-sm font-medium text-gray-700 text-center">Ligand SMILES</label>
-            <input type="text" id="ligand_smiles" name="ligand_smiles" placeholder="Enter SMILES" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm" required>
-
-            <div class="flex justify-center">
+            <!-- Submit Button -->
+            <div class="flex justify-center mt-4">
                 <button type="submit" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Generate JSON</button>
             </div>
         </form>
@@ -34,13 +53,68 @@
 </div>
 
 <script>
-    function updateProteinIDs() {
-        const numChains = parseInt(document.getElementById("num_chains").value);
-        let ids = [];
-        for (let i = 0; i < numChains; i++) {
-            ids.push(String.fromCharCode(65 + i)); // Generates 'A', 'B', 'C', etc.
+    // Limit values
+    const MAX_SEQUENCE_COUNT = 3;
+    const MAX_LIGAND_COUNT = 5;
+
+    // Function to add a new input field dynamically
+    function addField(containerId, fieldName) {
+        const container = document.getElementById(containerId);
+        const count = container.children.length;
+
+        // Check for the limit and show warning if needed
+        if (fieldName === 'sequence' && count >= MAX_SEQUENCE_COUNT) {
+            document.getElementById('sequence_limit_warning').style.display = 'block';
+            return;
         }
-        document.getElementById("protein_ids").value = ids.join(", ");
+
+        if (fieldName === 'ligand_smiles' && count >= MAX_LIGAND_COUNT) {
+            document.getElementById('ligand_limit_warning').style.display = 'block';
+            return;
+        }
+
+        // Hide the warning when adding a field below the limit
+        if (fieldName === 'sequence') {
+            document.getElementById('sequence_limit_warning').style.display = 'none';
+        }
+
+        if (fieldName === 'ligand_smiles') {
+            document.getElementById('ligand_limit_warning').style.display = 'none';
+        }
+
+        // Create new input field
+        const input = document.createElement('input');
+        input.type = 'text';
+        
+        // Set the name based on the field type (ligand or sequence)
+        input.name = `${fieldName}_${count}`;
+        input.className = "mt-1 block w-full border border-gray-300 rounded-md shadow-sm";
+        
+        // Adjust placeholder text
+        let fieldLabel = fieldName.replace('_', ' ');
+        fieldLabel = fieldLabel.charAt(0).toUpperCase() + fieldLabel.slice(1); // Capitalize the first letter
+        input.placeholder = `Enter ${fieldLabel} ${count + 1}`;
+        
+        // Append to the container
+        container.appendChild(input);
+    }
+
+    // Show input for ligand SMILES
+    function showSmilesInput() {
+        document.getElementById('method_selection').style.display = 'none';
+        document.getElementById('ligand_smiles_section').style.display = 'block';
+    }
+
+    // Show input for SDF file upload
+    function showSdfInput() {
+        document.getElementById('method_selection').style.display = 'none';
+        document.getElementById('sdf_section').style.display = 'block';
+    }
+
+    // Cancel the input and return to method selection
+    function cancelInput(sectionId) {
+        document.getElementById(sectionId).style.display = 'none';
+        document.getElementById('method_selection').style.display = 'block';
     }
 </script>
 {% endblock %}

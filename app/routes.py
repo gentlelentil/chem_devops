@@ -1,6 +1,11 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file
+from flask import after_this_request
 from flask_login import login_user, login_required, logout_user, current_user
 import requests
+from werkzeug.utils import secure_filename
+import zipfile
+import uuid
+import shutil
 
 from . import db
 
@@ -15,6 +20,15 @@ from .models import User, RegistrationForm, LoginForm
 auth = Blueprint('auth', __name__)
 
 IMAGE_FOLDER = os.path.join('app', 'static', 'images')
+
+
+def extract_smiles_from_sdf(file_path):
+    smiles_list = []
+    supplier = Chem.SDMolSupplier(file_path)
+    for mol in supplier:
+        if mol is not None:
+            smiles_list.append(Chem.MolToSmiles(mol))
+    return smiles_list
 
 #homepage
 @auth.route('/')
@@ -202,57 +216,178 @@ def alphafold3():
     if request.method == 'POST':
         # Collect input data from the form
         name = request.form.get('name')
-        num_chains = int(request.form.get('num_chains'))
-        # num_ligands = int(request.form.get('num_ligands'))
-        num_ligands = 1
-        # protein_ids = request.form.getlist('protein_id')  # Get the list of selected protein IDs
-        # ligand_id = request.form.get('ligand_id')
-        sequence  = request.form.get('protein_sequence')
-        ligand_smiles = request.form.get('ligand_smiles')
+        if not name:
+            return jsonify({"error": "Name is required."}), 400
 
-        # Generate sequential letter IDs for proteins and ligands
-        sequence_ids = [chr(65 + i) for i in range(num_chains)]
-        ligand_ids = [chr(65 + num_chains + i) for i in range(num_ligands)]
+        # Dynamically determine the number of sequences from the form keys
+        # Collect sequences from the form
+        sequence_keys = [key for key in request.form.keys() if key.startswith('sequence_')]
+        sequences = [request.form.get(key) for key in sequence_keys if len(request.form.get(key).strip()) > 0]  # Filter empty strings
 
-        # Create the JSON structure
-        data = {
-            "name": name,
-            "sequences": [
-                {
-                    "protein": {
-                        "id": sequence_ids,  # List of protein IDs based on number of chains
-                        "sequence": sequence
-                    }
-                },
-                {
-                    "ligand": {
-                        "id": ligand_ids[0],  # Assuming only one ligand ID is needed
-                        "smiles": ligand_smiles
-                    }
+        if not sequences or any(not seq for seq in sequences):
+            return jsonify({"error": "At least one valid sequence is required."}), 400
+        if len(sequences) > 3:
+            return jsonify({"error": "You can only submit up to 3 sequences."}), 400
+
+        # Handle uploaded SDF file
+        sdf_file = request.files.get('sdf_file')
+
+        # Collect ligand SMILES strings from the form
+        ligand_keys = [key for key in request.form.keys() if key.startswith('ligand_smiles_')]
+        lig_check = [request.form.get(key) for key in ligand_keys if len(request.form.get(key).strip()) > 0]  # Filter empty strings
+
+        # If ligands are provided, check the number of ligands
+        if ligand_keys and len(ligand_keys) > 5:
+            return jsonify({"error": "You can only submit up to 10 ligands."}), 400
+
+        if sdf_file and lig_check:
+            return jsonify({"error": "Please provide either an SDF file or manual ligands, not both."}), 400
+
+        # Prepare files lists
+        sequence_files = []
+        ligand_files = []
+
+        # Handling sequence files
+        for i, seq in enumerate(sequences, start=1):
+            sequence_filename = f"sequence_{i}.txt"
+            sequence_files.append((sequence_filename, seq))
+
+        # Handle SDF upload
+        if sdf_file:
+            ligands = []
+            if not sdf_file.filename.endswith('.sdf'):
+                return jsonify({"error": "Invalid file type. Please upload an SDF file."}), 400
+            
+            filename = secure_filename(sdf_file.filename)
+            sdf_path = os.path.join("/tmp", filename)
+            sdf_file.save(sdf_path)
+
+            try:
+                supplier = Chem.SDMolSupplier(sdf_path)
+                ligands = [Chem.MolToSmiles(mol) for mol in supplier if mol is not None]
+            except Exception as e:
+                return jsonify({"error": f"Failed to parse SDF file: {str(e)}"}), 400
+            finally:
+                os.remove(sdf_path)  # Clean up the temporary file
+
+            if not ligands:
+                return jsonify({"error": "No valid ligands found in the SDF file."}), 400
+
+        # Handle manual ligand input
+        if lig_check:
+            ligands = [request.form.get(key) for key in ligand_keys if request.form.get(key)]
+
+        if not ligands:
+            return jsonify({"error": "At least one ligand is required (SDF or manual input)."}), 400
+
+        # Handling ligand files
+        for i, ligand in enumerate(ligands, start=1):
+            ligand_filename = f"ligand_{i}.txt"
+            ligand_files.append((ligand_filename, ligand))
+
+        # Prepare the JSON data
+        json_data = []
+        for seq_idx, sequence in enumerate(sequences, start=1):
+            for lig_idx, ligand in enumerate(ligands, start=1):
+                data = {
+                    "name": name,
+                    "sequences": [
+                        {
+                            "protein": {
+                                "id": f"sequence_{seq_idx}",
+                                "sequence": sequence
+                            }
+                        },
+                        {
+                            "ligand": {
+                                "id": f"ligand_{lig_idx}",
+                                "smiles": ligand
+                            }
+                        }
+                    ],
+                    "modelSeeds": [1],
+                    "dialect": "alphafold3",
+                    "version": 1
                 }
-            ],
-            "modelSeeds": [1],
-            "dialect": "alphafold3",
-            "version": 1
-        }
+                json_data.append(data)
 
-        # Save the JSON to a file
-        output_file = f"{name}_input.json"
-        # output_path = os.path.join("/home/af/af_output", output_file)
-        output_path = os.path.join("/home/nathaniel/Documents/alphafold_json_testdir", output_file)
-        with open(output_path, 'w') as file:
-            json.dump(data, file, indent=2)
 
-        return jsonify({"message": "JSON file created successfully!", "file": output_path})
+        # Generate a unique folder for the job based on the job name and a UUID
+        unique_id = uuid.uuid4().hex
+        job_folder = os.path.join("/home/nathaniel/Desktop/flask/app/static/af3_generated_inputs", f"{name}_{unique_id}")
+        os.makedirs(job_folder, exist_ok=True)
+
+
+        # Save each JSON to a file, creating a unique filename for each combination of sequence and ligand
+        for idx, data in enumerate(json_data, start=1):
+            json_filename = f"{name}_seq_{data['sequences'][0]['protein']['id']}_lig_{data['sequences'][1]['ligand']['id']}.json"
+            json_filepath = os.path.join(job_folder, json_filename)
+            with open(json_filepath, 'w') as json_file:
+                json.dump(data, json_file, indent=2)
+
+        # # Save generated files into the unique job folder
+        # for i, sequence in enumerate(sequences, start=1):
+        #     sequence_filename = os.path.join(job_folder, f"sequence_{i}.txt")
+        #     with open(sequence_filename, 'w') as seq_file:
+        #         seq_file.write(sequence)
+
+        # for i, ligand in enumerate(ligands, start=1):
+        #     ligand_filename = os.path.join(job_folder, f"ligand_{i}.json")
+        #     with open(ligand_filename, 'w') as lig_file:
+        #         json.dump({"ligand_smiles": ligand}, lig_file, indent=2)
+
+        # Create a subdirectory for the ZIP contents
+        job_subdir = os.path.join(job_folder, f"{name}_inputs")
+        os.makedirs(job_subdir, exist_ok=True)
+
+        # Move generated files into the job-specific subdirectory
+        for file in os.listdir(job_folder):
+            file_path = os.path.join(job_folder, file)
+            if os.path.isfile(file_path):  # Skip directories
+                shutil.move(file_path, os.path.join(job_subdir, file))
+
+        # Create a ZIP file containing the job folder
+        zip_filename = f"{job_folder}.zip"
+        with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, _, files in os.walk(job_folder):
+                for file in files:
+                    zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), job_folder))
+
+        # Delete the job folder and its files (but keep the ZIP)
+        for root, _, files in os.walk(job_folder):
+            for file in files:
+                os.remove(os.path.join(root, file))
+        # Now delete everything in the output directory recursively (including the job_subdir)
+        shutil.rmtree(job_folder)  # Recursively removes the output_dir and everything inside it
+
+        # try:
+        #     os.rmdir(job_folder)  # Remove the empty job folder
+        # except OSError as e:
+        #     print(f"Error deleting directory {job_folder}: {e.strerror}")
+
+        # Redirect to the success page with the ZIP filename
+        return redirect(url_for('auth.success', zip_filename=os.path.basename(zip_filename)))
+
 
     return render_template('alphafold3.html')
 
-# @auth.route('/admetresult')
-# @login_required
-# def admet_result():
-#     prediction = request.args.get('result')
+@auth.route('/success')
+@login_required
+def success():
+    zip_filename = request.args.get('zip_filename')
+    return render_template('success.html', zip_filename=zip_filename)
 
+@auth.route('/download_zip/<filename>')
+@login_required
+def download_zip(filename):
+    zip_path = os.path.join('/home/nathaniel/Desktop/flask/app/static/af3_generated_inputs', filename)
 
+    @after_this_request
+    def remove_file(response):
+        try:
+            os.remove(zip_path)  # Delete the ZIP file after serving it
+        except Exception as e:
+            print(f"Error deleting ZIP file {zip_path}: {e}")
+        return response
 
-
-#     return render_template('admet-result.html', prediction=prediction, title='ADMET Result')
+    return send_file(zip_path, as_attachment=True)

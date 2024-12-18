@@ -210,6 +210,125 @@ def admetpredictor():
 
     return render_template('admet-predictor.html', title='ADMET Predictor', prediction=None)
 
+# Function to generate the list of chain letters based on the numeric value
+def generate_chain_letters(chain_count):
+    # Chain letters: ['A', 'B', 'C', 'D', ...]
+    return [chr(65 + i) for i in range(chain_count)]  # 65 is the ASCII value for 'A'
+
+# @auth.route('/alphafold3', methods=['GET', 'POST'])
+# @login_required
+# def alphafold3():
+#     if request.method == 'POST':
+#         # Collect input data from the form
+#         name = request.form.get('name')
+#         if not name:
+#             return jsonify({"error": "Name is required."}), 400
+
+#         # Dynamically collect sequences and their respective chain counts
+#         sequence_keys = [key for key in request.form.keys() if key.startswith('sequence_')]
+#         sequences = [request.form.get(key).strip() for key in sequence_keys if len(request.form.get(key).strip()) > 0]
+        
+#         chain_keys = [key for key in request.form.keys() if key.startswith('chain_')]
+#         chains = [int(request.form.get(key).strip()) for key in chain_keys if len(request.form.get(key).strip()) > 0]
+
+#         # Validate input
+#         if not sequences or any(not seq for seq in sequences):
+#             return jsonify({"error": "At least one valid sequence is required."}), 400
+#         if len(sequences) != len(chains):
+#             return jsonify({"error": "Each sequence must have an associated chain count."}), 400
+
+#         # Handle ligand inputs
+#         sdf_file = request.files.get('sdf_file')
+#         ligand_keys = [key for key in request.form.keys() if key.startswith('ligand_smiles_')]
+#         ligands = [request.form.get(key).strip() for key in ligand_keys if len(request.form.get(key).strip()) > 0]
+
+#         # Ensure maximum ligand count is not exceeded but only for input
+#         if ligands:
+#             if len(ligands) > 10:
+#                 return jsonify({"error": "You can only submit up to 10 ligands."}), 400
+
+#         if sdf_file and ligands:
+#             return jsonify({"error": "Please provide either an SDF file or manual ligands, not both."}), 400
+
+#         if sdf_file:
+#             if not sdf_file.filename.endswith('.sdf'):
+#                 return jsonify({"error": "Invalid file type. Please upload an SDF file."}), 400
+
+#             filename = secure_filename(sdf_file.filename)
+#             sdf_path = os.path.join("/tmp", filename)
+#             sdf_file.save(sdf_path)
+
+#             try:
+#                 supplier = Chem.SDMolSupplier(sdf_path)
+#                 ligands = [Chem.MolToSmiles(mol) for mol in supplier if mol is not None]
+#             except Exception as e:
+#                 return jsonify({"error": f"Failed to parse SDF file: {str(e)}"}), 400
+#             finally:
+#                 os.remove(sdf_path)  # Clean up the temporary file
+
+#             if not ligands:
+#                 return jsonify({"error": "No valid ligands found in the SDF file."}), 400
+
+#         if not ligands:
+#             return jsonify({"error": "At least one ligand is required (SDF or manual input)."}), 400
+
+
+
+#         # Prepare the output folder
+#         job_folder = os.path.join("/home/nathaniel/Desktop/flask/app/static/af3_generated_inputs", f"{name}_{uuid.uuid4().hex}")
+#         os.makedirs(job_folder, exist_ok=True)
+
+#         # Generate JSON files for all combinations of sequences and ligands
+#         for seq_idx, (sequence, chain_count) in enumerate(zip(sequences, chains)):
+#             # Dynamically generate chain IDs (A, B, C, ...)
+#             chain_ids = [chr(65 + i) for i in range(chain_count)]
+
+#             for lig_idx, ligand in enumerate(ligands):
+#                 # Dynamically assign a ligand ID (after the chains)
+#                 ligand_id = chr(65 + chain_count)  # Start after the chain IDs
+
+#                 # Create the JSON object
+#                 json_data = {
+#                     "name": name,
+#                     "sequences": [{
+#                         "protein": {
+#                             "id": chain_ids,
+#                             "sequence": sequence
+#                         }
+#                     }],
+#                     "ligands": [{
+#                         "ligand": {
+#                             "id": ligand_id,
+#                             "smiles": ligand
+#                         }
+#                     }],
+#                     "modelSeeds": [1],
+#                     "dialect": "alphafold3",
+#                     "version": 1
+#                 }
+
+#                 # Save the JSON file
+#                 json_filename = f"{name}_seq{seq_idx + 1}_ligand{lig_idx + 1}_input.json"
+#                 json_filepath = os.path.join(job_folder, json_filename)
+#                 with open(json_filepath, 'w') as json_file:
+#                     json.dump(json_data, json_file, indent=2)
+
+#         # Create a ZIP file containing all the generated JSON files
+#         zip_filename = f"{job_folder}.zip"
+#         with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+#             for root, _, files in os.walk(job_folder):
+#                 for file in files:
+#                     zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), job_folder))
+
+#         # Clean up the temporary job folder
+#         shutil.rmtree(job_folder)
+
+#         # Redirect to the success page
+#         return redirect(url_for('auth.success', zip_filename=os.path.basename(zip_filename)))
+
+#     return render_template('alphafold3.html')
+
+
 @auth.route('/alphafold3', methods=['GET', 'POST'])
 @login_required
 def alphafold3():
@@ -219,45 +338,46 @@ def alphafold3():
         if not name:
             return jsonify({"error": "Name is required."}), 400
 
-        # Dynamically determine the number of sequences from the form keys
-        # Collect sequences from the form
+        # Dynamically collect sequences and their respective chain counts
         sequence_keys = [key for key in request.form.keys() if key.startswith('sequence_')]
-        sequences = [request.form.get(key) for key in sequence_keys if len(request.form.get(key).strip()) > 0]  # Filter empty strings
+        sequences = [request.form.get(key).strip() for key in sequence_keys if len(request.form.get(key).strip()) > 0]
+        
+        chain_keys = [key for key in request.form.keys() if key.startswith('chain_')]
+        chains = [int(request.form.get(key).strip()) for key in chain_keys if len(request.form.get(key).strip()) > 0]
 
+        # Validate input
         if not sequences or any(not seq for seq in sequences):
             return jsonify({"error": "At least one valid sequence is required."}), 400
-        if len(sequences) > 3:
-            return jsonify({"error": "You can only submit up to 3 sequences."}), 400
+        if len(sequences) != len(chains):
+            return jsonify({"error": "Each sequence must have an associated chain count."}), 400
 
-        # Handle uploaded SDF file
+        # Handle ligand inputs
         sdf_file = request.files.get('sdf_file')
-
-        # Collect ligand SMILES strings from the form
         ligand_keys = [key for key in request.form.keys() if key.startswith('ligand_smiles_')]
-        lig_check = [request.form.get(key) for key in ligand_keys if len(request.form.get(key).strip()) > 0]  # Filter empty strings
+        ligands = [request.form.get(key).strip() for key in ligand_keys if len(request.form.get(key).strip()) > 0]
 
-        # If ligands are provided, check the number of ligands
-        if ligand_keys and len(ligand_keys) > 5:
-            return jsonify({"error": "You can only submit up to 10 ligands."}), 400
+        # Handle the new dropdown for duplicate ligands per sequence
+        duplicate_ligands_per_sequence = int(request.form.get('ligand_duplicates', 1))  # Default to 1 if not provided
+        if duplicate_ligands_per_sequence < 1 or duplicate_ligands_per_sequence > 4:
+            return jsonify({"error": "Duplicate ligands per sequence must be between 1 and 4."}), 400
 
-        if sdf_file and lig_check:
+        if ligands:
+            if len(ligands) > 10:
+                return jsonify({"error": "You can only submit up to 10 ligands."}), 400
+
+        if sdf_file and ligands:
             return jsonify({"error": "Please provide either an SDF file or manual ligands, not both."}), 400
 
-        # Prepare files lists
-        sequence_files = []
-        ligand_files = []
-
-        # Handling sequence files
-        for i, seq in enumerate(sequences, start=1):
-            sequence_filename = f"sequence_{i}.txt"
-            sequence_files.append((sequence_filename, seq))
-
-        # Handle SDF upload
         if sdf_file:
-            ligands = []
+
+            # Handle the new dropdown for duplicate ligands per sequence
+            duplicate_ligands_per_sequence = int(request.form.get('sdf_duplicates', 1))  # Default to 1 if not provided
+            if duplicate_ligands_per_sequence < 1 or duplicate_ligands_per_sequence > 4:
+                return jsonify({"error": "Duplicate ligands per sequence must be between 1 and 4."}), 400
+
             if not sdf_file.filename.endswith('.sdf'):
                 return jsonify({"error": "Invalid file type. Please upload an SDF file."}), 400
-            
+
             filename = secure_filename(sdf_file.filename)
             sdf_path = os.path.join("/tmp", filename)
             sdf_file.save(sdf_path)
@@ -268,108 +388,102 @@ def alphafold3():
             except Exception as e:
                 return jsonify({"error": f"Failed to parse SDF file: {str(e)}"}), 400
             finally:
-                os.remove(sdf_path)  # Clean up the temporary file
+                os.remove(sdf_path)
 
             if not ligands:
                 return jsonify({"error": "No valid ligands found in the SDF file."}), 400
 
-        # Handle manual ligand input
-        if lig_check:
-            ligands = [request.form.get(key) for key in ligand_keys if request.form.get(key)]
-
         if not ligands:
             return jsonify({"error": "At least one ligand is required (SDF or manual input)."}), 400
 
-        # Handling ligand files
-        for i, ligand in enumerate(ligands, start=1):
-            ligand_filename = f"ligand_{i}.txt"
-            ligand_files.append((ligand_filename, ligand))
+        # Prepare the output folder
+        job_folder = os.path.join("/home/nathaniel/Desktop/flask/app/static/af3_generated_inputs", f"{name}_{uuid.uuid4().hex}")
+        os.makedirs(job_folder, exist_ok=True)
 
-        # Prepare the JSON data
-        json_data = []
-        for seq_idx, sequence in enumerate(sequences, start=1):
-            for lig_idx, ligand in enumerate(ligands, start=1):
-                data = {
-                    "name": name,
-                    "sequences": [
-                        {
-                            "protein": {
-                                "id": f"sequence_{seq_idx}",
-                                "sequence": sequence
-                            }
-                        },
-                        {
-                            "ligand": {
-                                "id": f"ligand_{lig_idx}",
-                                "smiles": ligand
-                            }
+        # Create lists for sequence IDs and ligand SMILES to be written into text files
+        sequence_ids = [f"SEQ{idx + 1}: {seq}" for idx, seq in enumerate(sequences)]
+        ligand_ids_and_smiles = [f"LIG{idx + 1}: {ligand}" for idx, ligand in enumerate(ligands)]
+
+        print(f"DEBUG number of duplicate ligands: {duplicate_ligands_per_sequence}")
+
+        # Generate JSON files for all combinations of sequences and ligands
+        for seq_idx, (sequence, chain_count) in enumerate(zip(sequences, chains)):
+            chain_ids = [chr(65 + i) for i in range(chain_count)]
+
+
+            for lig_idx, ligand in enumerate(ligands):
+
+                jsonname = f"{name}_seq{seq_idx + 1}_ligand{lig_idx + 1}"
+                json_filename = f"{name}_seq{seq_idx + 1}_ligand{lig_idx + 1}_input.json"
+
+                # Initialize the sequence data
+                sequence_data = {
+                    "protein": {
+                        "id": chain_ids,
+                        "sequence": sequence
+                    }
+                }
+
+                # Create a list for ligands with the proper structure
+                ligands_list = []
+
+                # Add the requested number of duplicates for the current ligand
+                for duplicate_idx in range(duplicate_ligands_per_sequence):
+                    ligand_id = chr(65 + chain_count + duplicate_idx)
+                    ligand_entry = {
+                        "ligand": {
+                            "id": ligand_id,
+                            "smiles": ligand
                         }
+                    }
+                    ligands_list.append(ligand_entry)  # Append ligand to list
+
+                # Create the full JSON data structure
+                json_data = {
+                    "name": jsonname,
+                    "sequences": [
+                        sequence_data,
+                        *ligands_list  # Include protein and ligands as separate entries
                     ],
                     "modelSeeds": [1],
                     "dialect": "alphafold3",
                     "version": 1
                 }
-                json_data.append(data)
+                        # Save the JSON file
+                json_filepath = os.path.join(job_folder, json_filename)
+                with open(json_filepath, 'w') as json_file:
+                    json.dump(json_data, json_file, indent=2)
+ 
 
+        # Create a text file for sequence IDs and their associated sequences
+        sequence_ids_filename = os.path.join(job_folder, "sequences.txt")
+        with open(sequence_ids_filename, 'w') as seq_file:
+            for seq_id in sequence_ids:
+                seq_file.write(f"{seq_id}\n")
 
-        # Generate a unique folder for the job based on the job name and a UUID
-        unique_id = uuid.uuid4().hex
-        job_folder = os.path.join("/home/nathaniel/Desktop/flask/app/static/af3_generated_inputs", f"{name}_{unique_id}")
-        os.makedirs(job_folder, exist_ok=True)
+        # Create a text file for ligand IDs and their associated SMILES
+        ligand_ids_filename = os.path.join(job_folder, "ligands.txt")
+        with open(ligand_ids_filename, 'w') as lig_file:
+            for lig_id_and_smiles in ligand_ids_and_smiles:
+                lig_file.write(f"{lig_id_and_smiles}\n")
 
-
-        # Save each JSON to a file, creating a unique filename for each combination of sequence and ligand
-        for idx, data in enumerate(json_data, start=1):
-            json_filename = f"{name}_seq_{data['sequences'][0]['protein']['id']}_lig_{data['sequences'][1]['ligand']['id']}.json"
-            json_filepath = os.path.join(job_folder, json_filename)
-            with open(json_filepath, 'w') as json_file:
-                json.dump(data, json_file, indent=2)
-
-        # # Save generated files into the unique job folder
-        # for i, sequence in enumerate(sequences, start=1):
-        #     sequence_filename = os.path.join(job_folder, f"sequence_{i}.txt")
-        #     with open(sequence_filename, 'w') as seq_file:
-        #         seq_file.write(sequence)
-
-        # for i, ligand in enumerate(ligands, start=1):
-        #     ligand_filename = os.path.join(job_folder, f"ligand_{i}.json")
-        #     with open(ligand_filename, 'w') as lig_file:
-        #         json.dump({"ligand_smiles": ligand}, lig_file, indent=2)
-
-        # Create a subdirectory for the ZIP contents
-        job_subdir = os.path.join(job_folder, f"{name}_inputs")
-        os.makedirs(job_subdir, exist_ok=True)
-
-        # Move generated files into the job-specific subdirectory
-        for file in os.listdir(job_folder):
-            file_path = os.path.join(job_folder, file)
-            if os.path.isfile(file_path):  # Skip directories
-                shutil.move(file_path, os.path.join(job_subdir, file))
-
-        # Create a ZIP file containing the job folder
+        # Create a ZIP file containing all the generated JSON files and text files
         zip_filename = f"{job_folder}.zip"
         with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, _, files in os.walk(job_folder):
                 for file in files:
-                    zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), job_folder))
+                    zipf.write(os.path.join(root, file), 
+                       os.path.relpath(os.path.join(root, file), os.path.dirname(job_folder)))
 
-        # Delete the job folder and its files (but keep the ZIP)
-        for root, _, files in os.walk(job_folder):
-            for file in files:
-                os.remove(os.path.join(root, file))
-        # Now delete everything in the output directory recursively (including the job_subdir)
-        shutil.rmtree(job_folder)  # Recursively removes the output_dir and everything inside it
+        # Clean up the temporary job folder
+        shutil.rmtree(job_folder)
 
-        # try:
-        #     os.rmdir(job_folder)  # Remove the empty job folder
-        # except OSError as e:
-        #     print(f"Error deleting directory {job_folder}: {e.strerror}")
-
-        # Redirect to the success page with the ZIP filename
+        # Redirect to the success page
         return redirect(url_for('auth.success', zip_filename=os.path.basename(zip_filename)))
 
-
     return render_template('alphafold3.html')
+
+
 
 @auth.route('/success')
 @login_required

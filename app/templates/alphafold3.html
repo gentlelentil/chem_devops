@@ -14,7 +14,15 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 text-center">Protein Sequences</label>
                 <div id="sequence_fields" class="space-y-2">
-                    <input type="text" name="sequence_0" placeholder="Enter protein sequence 1" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm" required>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" name="sequence_0" placeholder="Enter protein sequence 1" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm" required>
+                        <select name="chain_0" class="mt-1 block border border-gray-300 rounded-md shadow-sm">
+                            <option value="1">1 Chain</option>
+                            <option value="2">2 Chains</option>
+                            <option value="3">3 Chains</option>
+                            <option value="4">4 Chains</option>
+                        </select>
+                    </div>
                 </div>
                 <button type="button" onclick="addField('sequence_fields', 'sequence')" class="mt-2 px-2 py-1 bg-green-600 text-white rounded-md hover:bg-green-700">Add Sequence</button>
                 <p id="sequence_limit_warning" class="text-red-600 text-sm hidden">You can only add up to 3 sequences.</p>
@@ -26,14 +34,25 @@
                 <button type="button" id="choose_smiles" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700" onclick="showSmilesInput()">Enter Ligand SMILES</button>
             </div>
 
-            <!-- Ligand SMILES Section (Hidden initially) -->
             <div id="ligand_smiles_section" class="hidden space-y-2">
                 <label class="block text-sm font-medium text-gray-700 text-center">Ligand SMILES</label>
                 <div id="ligand_smiles_fields" class="space-y-2">
-                    <input type="text" name="ligand_smiles_0" placeholder="Enter ligand SMILES 1" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm">
+                    <div class="flex items-center space-x-2">
+                        <input type="text" name="ligand_smiles_0" placeholder="Enter ligand SMILES 1" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm">
+                    </div>
                 </div>
                 <button type="button" onclick="addField('ligand_smiles_fields', 'ligand_smiles')" class="mt-2 px-2 py-1 bg-green-600 text-white rounded-md hover:bg-green-700">Add Ligand</button>
                 <p id="ligand_limit_warning" class="text-red-600 text-sm hidden">You can only add up to 10 ligands.</p>
+                
+                <!-- Duplicates Dropdown for Ligand SMILES Section -->
+                <label for="ligand_duplicates" class="block text-sm font-medium text-gray-700 text-center">Number of Duplicates</label>
+                <select name="ligand_duplicates" id="ligand_duplicates" class="mt-1 block border border-gray-300 rounded-md shadow-sm">
+                    <option value="1">1 Duplicate</option>
+                    <option value="2">2 Duplicates</option>
+                    <option value="3">3 Duplicates</option>
+                    <option value="4">4 Duplicates</option>
+                </select>
+            
                 <button type="button" class="mt-2 px-2 py-1 bg-red-600 text-white rounded-md hover:bg-red-700" onclick="cancelInput('ligand_smiles_section')">Cancel Ligand SMILES</button>
             </div>
 
@@ -41,6 +60,16 @@
             <div id="sdf_section" class="hidden space-y-2">
                 <label class="block text-sm font-medium text-gray-700 text-center">Upload SDF File</label>
                 <input type="file" name="sdf_file" accept=".sdf" class="mt-1 block w-full text-sm text-gray-700">
+            
+                <!-- Duplicates Dropdown for SDF Section -->
+                <label for="sdf_duplicates" class="block text-sm font-medium text-gray-700 text-center">Number of Duplicates</label>
+                <select name="sdf_duplicates" id="sdf_duplicates" class="mt-1 block border border-gray-300 rounded-md shadow-sm">
+                    <option value="1">1 Duplicate</option>
+                    <option value="2">2 Duplicates</option>
+                    <option value="3">3 Duplicates</option>
+                    <option value="4">4 Duplicates</option>
+                </select>
+            
                 <button type="button" class="mt-2 px-2 py-1 bg-red-600 text-white rounded-md hover:bg-red-700" onclick="cancelInput('sdf_section')">Cancel SDF Upload</button>
             </div>
 
@@ -53,16 +82,13 @@
 </div>
 
 <script>
-    // Limit values
     const MAX_SEQUENCE_COUNT = 3;
     const MAX_LIGAND_COUNT = 5;
 
-    // Function to add a new input field dynamically
     function addField(containerId, fieldName) {
         const container = document.getElementById(containerId);
         const count = container.children.length;
 
-        // Check for the limit and show warning if needed
         if (fieldName === 'sequence' && count >= MAX_SEQUENCE_COUNT) {
             document.getElementById('sequence_limit_warning').style.display = 'block';
             return;
@@ -73,7 +99,6 @@
             return;
         }
 
-        // Hide the warning when adding a field below the limit
         if (fieldName === 'sequence') {
             document.getElementById('sequence_limit_warning').style.display = 'none';
         }
@@ -82,36 +107,58 @@
             document.getElementById('ligand_limit_warning').style.display = 'none';
         }
 
-        // Create new input field
-        const input = document.createElement('input');
-        input.type = 'text';
-        
-        // Set the name based on the field type (ligand or sequence)
-        input.name = `${fieldName}_${count}`;
-        input.className = "mt-1 block w-full border border-gray-300 rounded-md shadow-sm";
-        
-        // Adjust placeholder text
-        let fieldLabel = fieldName.replace('_', ' ');
-        fieldLabel = fieldLabel.charAt(0).toUpperCase() + fieldLabel.slice(1); // Capitalize the first letter
-        input.placeholder = `Enter ${fieldLabel} ${count + 1}`;
-        
-        // Append to the container
-        container.appendChild(input);
+        const div = document.createElement('div');
+        div.className = "flex items-center space-x-2";
+
+        if (fieldName === 'sequence') {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = `sequence_${count}`;
+            input.className = "mt-1 block w-full border border-gray-300 rounded-md shadow-sm";
+            input.placeholder = `Enter protein sequence ${count + 1}`;
+            div.appendChild(input);
+
+            const select = document.createElement('select');
+            select.name = `chain_${count}`;
+            select.className = "mt-1 block border border-gray-300 rounded-md shadow-sm";
+            select.innerHTML = `
+                <option value="1">1 Chain</option>
+                <option value="2">2 Chains</option>
+                <option value="3">3 Chains</option>
+                <option value="4">4 Chains</option>`;
+            div.appendChild(select);
+        } else {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = `ligand_smiles_${count}`;
+            input.className = "mt-1 block w-full border border-gray-300 rounded-md shadow-sm";
+            input.placeholder = `Enter ligand SMILES ${count + 1}`;
+            div.appendChild(input);
+
+            const select = document.createElement('select');
+            select.name = `ligand_count_${count}`;
+            select.className = "mt-1 block border border-gray-300 rounded-md shadow-sm";
+            select.innerHTML = `
+                <option value="1">1 Duplicate</option>
+                <option value="2">2 Duplicates</option>
+                <option value="3">3 Duplicates</option>
+                <option value="4">4 Duplicates</option>`;
+            div.appendChild(select);
+        }
+
+        container.appendChild(div);
     }
 
-    // Show input for ligand SMILES
     function showSmilesInput() {
         document.getElementById('method_selection').style.display = 'none';
         document.getElementById('ligand_smiles_section').style.display = 'block';
     }
 
-    // Show input for SDF file upload
     function showSdfInput() {
         document.getElementById('method_selection').style.display = 'none';
         document.getElementById('sdf_section').style.display = 'block';
     }
 
-    // Cancel the input and return to method selection
     function cancelInput(sectionId) {
         document.getElementById(sectionId).style.display = 'none';
         document.getElementById('method_selection').style.display = 'block';
